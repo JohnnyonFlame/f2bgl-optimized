@@ -6,7 +6,12 @@
 #include <SDL.h>
 #include "stub.h"
 
-static const int kDefaultW = 640;
+#ifdef EGL_CONTEXT
+//Thanks Pickle.
+#include "eglport.h"
+#endif
+
+static const int kDefaultW = 320;
 static const int kDefaultH = kDefaultW * 3 / 4;
 
 static int gWindowW = kDefaultW;
@@ -82,9 +87,14 @@ int main(int argc, char *argv[]) {
 		return -1;
 	}
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
+#ifndef EGL_CONTEXT
 	SDL_ShowCursor(SDL_DISABLE);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_SetVideoMode(gWindowW, gWindowH, 0, SDL_OPENGL | SDL_RESIZABLE);
+#else
+	SDL_SetVideoMode(gWindowW, gWindowH, 0, SDL_HWSURFACE | SDL_DOUBLEBUF);
+	EGL_Open(gWindowW, gWindowH);
+#endif
 	const int ret = stub->init(argc - 1, argv + 1);
 	if (ret != 0) {
 		return ret;
@@ -157,17 +167,28 @@ int main(int argc, char *argv[]) {
 		if (w != gWindowW || h != gWindowH) {
 			gWindowW = w;
 			gWindowH = h;
+#ifndef EGL_CONTEXT
 			SDL_SetVideoMode(gWindowW, gWindowH, 0, SDL_OPENGL | SDL_RESIZABLE);
+#else
+			SDL_SetVideoMode(gWindowW, gWindowH, 0, SDL_HWSURFACE | SDL_DOUBLEBUF);
+			EGL_Open(gWindowW, gWindowH);
+#endif
 			stub->initGL(gWindowW, gWindowH);
 		}
 		if (!paused) {
 			const unsigned int ticks = SDL_GetTicks();
 			stub->doTick(ticks);
 			stub->drawGL();
+#ifndef EGL_CONTEXT
 			SDL_GL_SwapBuffers();
+#else
+			EGL_SwapBuffers();
+#endif
 		}
 		SDL_Delay(kTickDuration);
 	}
+
+	EGL_Close();
 	stub->quit();
 	return 0;
 }

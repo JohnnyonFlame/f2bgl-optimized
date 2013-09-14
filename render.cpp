@@ -3,6 +3,9 @@
  * Copyright (C) 2006-2012 Gregory Montoir (cyx@users.sourceforge.net)
  */
 
+//TODO: REMOVE THIS. ONLY HERE TO SHUT ECLIPSE UP
+#define USE_GLES
+
 #ifdef USE_GLES
 #include <GLES/gl.h>
 #else
