@@ -4,7 +4,6 @@
  */
 
 //TODO: REMOVE THIS. ONLY HERE TO SHUT ECLIPSE UP
-#define USE_GLES
 
 #ifdef USE_GLES
 #include <GLES/gl.h>

@@ -8,7 +8,7 @@ DEFINES = -DUSE_GLES -DEGL_CONTEXT
 
 LIBS = $(SDL_LIBS) -lGLESv1_CM -lEGL
 
-CXXFLAGS += -g -O -Wall -Wuninitialized -Wno-sign-compare
+CXXFLAGS += -g -O -Wall -Wuninitialized -Wno-sign-compare -Wno-narrowing
 
 SRCS = box.cpp camera.cpp collision.cpp cutscene.cpp decoder.cpp file.cpp \
 	font.cpp game.cpp input.cpp inventory.cpp main.cpp mathfuncs.cpp menu.cpp mixer.cpp \
