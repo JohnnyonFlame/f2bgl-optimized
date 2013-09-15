@@ -36,6 +36,8 @@ struct Render {
 		int ph;
 	} _viewport;
 
+	unsigned int VBOs[2];
+
 	Render();
 	~Render();
 
@@ -45,6 +47,9 @@ struct Render {
 	void setCameraPitch(int a);
 
 	void drawPolygonFlat(const Vertex *vertices, int verticesCount, int color);
+#ifdef BUFFER_FLATPOLYGONS
+	void flushPolygonFlat();
+#endif
 	void drawPolygonTexture(const Vertex *vertices, int verticesCount, int primitive, const uint8_t *texData, int texW, int texH, int16_t texKey);
 	void drawParticle(const Vertex *pos, int color);
 	void drawSprite(int x, int y, const uint8_t *texData, int texW, int texH, int16_t texKey);

@@ -12,6 +12,33 @@
 #include "render.h"
 #include "texturecache.h"
 
+#ifdef BUFFER_FLATPOLYGONS
+/*
+ * __fGLvert(glv, v, r,g,b,a)
+ * Fills one GLvertex_flat instance
+ */
+struct GLvertex_flat {
+	GLfloat x,y,z;
+	GLfloat r, g, b, a;
+};
+
+#define __OFFSET_MEMBER(p, m) ((size_t*)(&((p *)0)->m))
+
+#define __fGLvert(glv, v, r,g,b,a) { \
+		glv.x = v.x; \
+		glv.y = v.y; \
+		glv.z = v.z; \
+		\
+		glv.r = r; \
+		glv.g = g; \
+		glv.b = b; \
+		glv.a = a; \
+}
+
+static GLvertex_flat polyflat_vert[20480];
+static int 			 polyflat_count = 0;
+#endif
+
 static const bool kOverlayDisabled = false;
 static const int kOverlayBufSize = 320 * 200;
 
@@ -181,6 +208,14 @@ Render::Render() {
 	_viewport.pw = 256;
 	_viewport.ph = 256;
 	_textureCache.init();
+#ifdef BUFFER_FLATPOLYGONS
+	glGenBuffers(2, VBOs);
+	glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(polyflat_vert), NULL, GL_DYNAMIC_DRAW);
+
+	//glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]); //TODO:: textured polygon vbo init */
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+#endif
 }
 
 Render::~Render() {
@@ -215,6 +250,7 @@ void Render::setCameraPitch(int ry) {
 	_cameraPitch = ry * 360 / 1024.;
 }
 
+#ifndef BUFFER_FLATPOLYGONS
 void Render::drawPolygonFlat(const Vertex *vertices, int verticesCount, int color) {
 	switch (color) {
 	case kFlatColorRed:
@@ -246,6 +282,78 @@ void Render::drawPolygonFlat(const Vertex *vertices, int verticesCount, int colo
 	emitTriFan3i(vertices, verticesCount);
 	glColor4f(1., 1., 1., 1.);
 }
+#else
+void Render::drawPolygonFlat(const Vertex *vertices, int verticesCount, int color) {
+	GLfloat r,g,b,a;
+	switch (color) {
+	case kFlatColorRed:
+		r = 1.; g = 0.; b = 0.; a = .5;
+		break;
+	case kFlatColorGreen:
+		r = 0.; g = 1.; b = 0.; a = .5;
+		break;
+	case kFlatColorYellow:
+		r = 1.; g = 1.; b = 0.; a = .5;
+		break;
+	case kFlatColorBlue:
+		r = 0.; g = 0.; b = 1.; a = .5;
+		break;
+	case kFlatColorShadow:
+		r = 0.; g = 0.; b = 0.; a = .5;
+		break;
+	case kFlatColorLight:
+		r = 1.; g = 1.; b = 1.; a = .2;
+		break;
+	default:
+		if (color >= 0 && color < 256) {
+			r = _pixelColorMap[0][color];
+			g = _pixelColorMap[1][color];
+			b = _pixelColorMap[2][color];
+			a = _pixelColorMap[3][color];
+		} else {
+			warning("Render::drawPolygonFlat() unhandled color %d", color);
+		}
+		break;
+	}
+
+	int i;
+	for (i=2; i<verticesCount;i++) {
+		/*
+		 * Transforms TRIANGLE_STRIP into TRIANGLES:
+		 * order doesn't matter for flat polygons.
+		 * a - b
+		 * | \ |
+		 * c - d
+		 *
+		 * (a - b - c - d) -> (a-b-c), (a, c, d)
+		 */
+		__fGLvert(polyflat_vert[polyflat_count],   vertices[0],   r,g,b,a);
+		__fGLvert(polyflat_vert[polyflat_count+1], vertices[i-1], r,g,b,a);
+		__fGLvert(polyflat_vert[polyflat_count+2], vertices[i],   r,g,b,a);
+
+		polyflat_count+=3;
+	}
+}
+
+void Render::flushPolygonFlat() {
+	glEnable(GL_COLOR_ARRAY);
+	glEnable(GL_ARRAY_BUFFER);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(GLvertex_flat) * polyflat_count, &polyflat_vert[0], GL_DYNAMIC_DRAW);
+
+	glVertexPointer(3, GL_FLOAT, sizeof(GLvertex_flat), __OFFSET_MEMBER(GLvertex_flat, x));
+	glColorPointer (4, GL_FLOAT, sizeof(GLvertex_flat), __OFFSET_MEMBER(GLvertex_flat, r));
+	glDrawArrays(GL_TRIANGLES, 0, polyflat_count);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	glDisable(GL_ARRAY_BUFFER);
+	glDisable(GL_COLOR_ARRAY);
+
+	polyflat_count = 0;
+}
+#endif
 
 void Render::drawPolygonTexture(const Vertex *vertices, int verticesCount, int primitive, const uint8_t *texData, int texW, int texH, int16_t texKey) {
 	assert(texData && texW > 0 && texH > 0);
