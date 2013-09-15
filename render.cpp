@@ -3,8 +3,6 @@
  * Copyright (C) 2006-2012 Gregory Montoir (cyx@users.sourceforge.net)
  */
 
-//TODO: REMOVE THIS. ONLY HERE TO SHUT ECLIPSE UP
-
 #ifdef USE_GLES
 #include <GLES/gl.h>
 #else
@@ -76,6 +74,7 @@ static GLfloat *bufferVertex(const Vertex *vertices, int count) {
 static void emitQuad2i(int x, int y, int w, int h) {
 #ifdef USE_GLES
 	GLfloat vertices[] = { x, y, x + w, y, x + w, y + h, x, y + h };
+	glVertexPointer(2, GL_FLOAT, 0, vertices);
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 #else
 	glBegin(GL_QUADS);
