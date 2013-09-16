@@ -6,6 +6,14 @@
 #ifndef RENDER_H__
 #define RENDER_H__
 
+#ifdef __GNUC__
+#define likely(x)       __builtin_expect(!!(x), 1)
+#define unlikely(x)     __builtin_expect(!!(x), 0)
+#else
+#define likely(x)       (x)
+#define unlikely(x)     (x)
+#endif
+
 #define BUFFER_TEXTPOLYGONS 1
 #define BUFFER_FLATPOLYGONS 1
 
@@ -26,6 +34,7 @@ struct Texture;
 struct Render {
 	uint8_t _clut[256 * 3];
 	float _pixelColorMap[4][256];
+	uint8_t _ubpixelColorMap[4][256];
 	int _w, _h;
 	struct {
 		uint8_t *buf;
@@ -56,6 +65,7 @@ struct Render {
 	void drawPolygonTexture(const Vertex *vertices, int verticesCount, int primitive, const uint8_t *texData, int texW, int texH, int16_t texKey);
 #ifdef BUFFER_TEXTPOLYGONS
 	void cached_drawPolygonTexture(const Vertex *vertices, int verticesCount, int primitive, const uint8_t *texData, int texW, int texH, int16_t texKey);
+	void renderQuads();
 	void flushQuads();
 #endif
 	void drawParticle(const Vertex *pos, int color);

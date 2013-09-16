@@ -14,8 +14,7 @@
 
 #ifdef BUFFER_TEXTPOLYGONS
 
-int flshd=0;
-
+static int cache_ready=0;
 
 #include <algorithm> /* to sort GLquads */
 struct GLvertex_textured {
@@ -41,6 +40,7 @@ static inline void __tGLvert(GLvertex_textured *glv, Vertex *v, GLfloat *uv, GLu
 
 static GLuint          polytext_lt = 0; //Last texture used
 static GLquad_textured polytext_quads[((64 + 1) * 64) + ((64+1) *64) + (64*64)];
+static GLuint          polytext_texturecache[sizeof(polytext_quads) / sizeof(polytext_quads[0])];
 static uint32_t 	   polytext_c = 0;
 #endif
 
@@ -51,7 +51,7 @@ static uint32_t 	   polytext_c = 0;
  */
 struct GLvertex_flat {
 	GLfloat x,y,z;
-	GLfloat r, g, b, a;
+	GLubyte r, g, b, a;
 };
 
 #define __fGLvert(glv, v, r,g,b,a) { \
@@ -346,32 +346,32 @@ void Render::drawPolygonFlat(const Vertex *vertices, int verticesCount, int colo
 #else
 
 void Render::drawPolygonFlat(const Vertex *vertices, int verticesCount, int color) {
-	GLfloat r=0,g=0,b=0,a=0;
+	GLubyte r=0,g=0,b=0,a=0;
 	switch (color) {
 	case kFlatColorRed:
-		r = 1.; g = 0.; b = 0.; a = .5;
+		r = 255; g = 0; b = 0; a = 127;
 		break;
 	case kFlatColorGreen:
-		r = 0.; g = 1.; b = 0.; a = .5;
+		r = 0; g = 255; b = 0; a = 127;
 		break;
 	case kFlatColorYellow:
-		r = 1.; g = 1.; b = 0.; a = .5;
+		r = 255; g = 255; b = 0; a = 127;
 		break;
 	case kFlatColorBlue:
-		r = 0.; g = 0.; b = 1.; a = .5;
+		r = 0; g = 0; b = 255; a = 127;
 		break;
 	case kFlatColorShadow:
-		r = 0.; g = 0.; b = 0.; a = .5;
+		r = 0; g = 0; b = 0; a = 127;
 		break;
 	case kFlatColorLight:
-		r = 1.; g = 1.; b = 1.; a = .2;
+		r = 255; g = 255; b = 255; a = 51;
 		break;
 	default:
 		if (color >= 0 && color < 256) {
-			r = _pixelColorMap[0][color];
-			g = _pixelColorMap[1][color];
-			b = _pixelColorMap[2][color];
-			a = _pixelColorMap[3][color];
+			r = _ubpixelColorMap[0][color];
+			g = _ubpixelColorMap[1][color];
+			b = _ubpixelColorMap[2][color];
+			a = _ubpixelColorMap[3][color];
 		} else {
 			warning("Render::drawPolygonFlat() unhandled color %d", color);
 		}
@@ -404,8 +404,8 @@ void Render::flushPolygonFlat() {
 	glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(GLvertex_flat) * polyflat_count, &polyflat_vert[0], GL_DYNAMIC_DRAW);
 
-	glVertexPointer(3, GL_FLOAT, sizeof(GLvertex_flat), __OFFSET_MEMBER(GLvertex_flat, x));
-	glColorPointer (4, GL_FLOAT, sizeof(GLvertex_flat), __OFFSET_MEMBER(GLvertex_flat, r));
+	glVertexPointer(3, GL_FLOAT, 		 sizeof(GLvertex_flat), __OFFSET_MEMBER(GLvertex_flat, x));
+	glColorPointer (4, GL_UNSIGNED_BYTE, sizeof(GLvertex_flat), __OFFSET_MEMBER(GLvertex_flat, r));
 	glDrawArrays(GL_TRIANGLES, 0, polyflat_count);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -517,7 +517,7 @@ void Render::drawPolygonTexture(const Vertex *vertices, int verticesCount, int p
 
 #ifdef BUFFER_TEXTPOLYGONS
 void Render::cached_drawPolygonTexture(const Vertex *vertices, int verticesCount, int primitive, const uint8_t *texData, int texW, int texH, int16_t texKey) {
-	if (flshd)
+	if (likely(cache_ready))
 		return;
 
 	assert(texData && texW > 0 && texH > 0);
@@ -587,19 +587,23 @@ static bool comp_quads(const GLquad_textured & q1, const GLquad_textured & q2)
 
 void Render::flushQuads()
 {
-	//
+	polytext_c = 0;
+	cache_ready = 0;
+}
 
-	/*glEnable(GL_TEXTURE_COORD_ARRAY);*/
+void Render::renderQuads()
+{
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_ARRAY_BUFFER);
 	glEnable(GL_CULL_FACE);
 
 	glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]);
-	if (!flshd) {
+
+	if (unlikely(!cache_ready)) {
 		std::sort(&polytext_quads[0], &polytext_quads[polytext_c], comp_quads);
 
 		glBufferData(GL_ARRAY_BUFFER, sizeof(GLquad_textured) * polytext_c, &polytext_quads[0].vertices[0], GL_DYNAMIC_DRAW);
-		flshd = 1;
+		cache_ready = 1;
 	}
 
 
@@ -609,7 +613,7 @@ void Render::flushQuads()
 	int tail=0;
 	for (int head = 1; head<polytext_c; head++) {
 		//printf("%i %i\n", head, polytext_c);
-		if (polytext_quads[tail].vertices[0].t != polytext_quads[head].vertices[0].t)
+		if (unlikely(polytext_quads[tail].vertices[0].t != polytext_quads[head].vertices[0].t))
 		{
 			glBindTexture(GL_TEXTURE_2D, polytext_quads[tail].vertices[0].t);
 			glDrawArrays(GL_TRIANGLES, tail*6, (head-tail)*6);
@@ -622,17 +626,11 @@ void Render::flushQuads()
 		}
 	}
 
-	/*glBindTexture(GL_TEXTURE_2D, polytext_quads[tail].vertices[0].t);
-	glDrawArrays(GL_TRIANGLES, tail*6, polytext_c*6);*/
-
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_ARRAY_BUFFER);
 	glDisable(GL_TEXTURE_2D);
-	/*glDisable(GL_TEXTURE_COORD_ARRAY);*/
-
-	//polytext_c = 0;
 }
 
 #endif
@@ -794,6 +792,11 @@ void Render::setPalette(const uint8_t *pal, int count) {
 		_pixelColorMap[1][i] = g / 255.;
 		_pixelColorMap[2][i] = b / 255.;
 		_pixelColorMap[3][i] = (i == 0) ? 0. : 1.;
+
+		_ubpixelColorMap[0][i] = r;
+		_ubpixelColorMap[1][i] = g;
+		_ubpixelColorMap[2][i] = b;
+		_ubpixelColorMap[3][i] = (i == 0) ? 0 : 255;
 		pal += 3;
 	}
 	_textureCache.setPalette(_clut);

@@ -690,6 +690,9 @@ void Game::updatePalette() {
 }
 
 void Game::loadSceneMap(int16_t key) {
+#ifdef BUFFER_TEXTPOLYGONS
+	_render->flushQuads();
+#endif
 	assert(key != 0);
 	uint8_t *p = _res.getData(kResType_MAP, key, "MAP3D");
 	_sceneCamerasCount = READ_LE_UINT32(p + 24);
@@ -2975,9 +2978,9 @@ void Game::cached_drawWall(const Vertex *vertices, int verticesCount, int textur
 	texture &= 4095;
 	if (texture >= 0  && texture < 512) {
 		_sceneAnimationsTable[texture].type |= 0x10;
-		if (texture != 0 && texture != 1) {
+		if (likely(texture != 0 && texture != 1)) {
 			SpriteImage *spr = &_sceneAnimationsTextureTable[texture];
-			if (spr->data) {
+			if (likely(spr->data)) {
 				const uint8_t *texData = _spriteCache.getData(spr->key, spr->data);
 				_render->cached_drawPolygonTexture(vertices, verticesCount, 0, texData, spr->w, spr->h, spr->key);
 			}
@@ -2989,9 +2992,9 @@ void Game::drawWall(const Vertex *vertices, int verticesCount, int texture) {
 	texture &= 4095;
 	if (texture >= 0  && texture < 512) {
 		_sceneAnimationsTable[texture].type |= 0x10;
-		if (texture != 0 && texture != 1) {
+		if (likely(texture != 0 && texture != 1)) {
 			SpriteImage *spr = &_sceneAnimationsTextureTable[texture];
-			if (spr->data) {
+			if (likely(spr->data)) {
 				const uint8_t *texData = _spriteCache.getData(spr->key, spr->data);
 				_render->drawPolygonTexture(vertices, verticesCount, 0, texData, spr->w, spr->h, spr->key);
 			}
@@ -3119,7 +3122,7 @@ bool Game::redrawSceneGridCell(int x, int z, CellMap *cell) {
 	}
 
 #ifdef BUFFER_TEXTPOLYGONS
-	if (cell->type == 1) {
+	if (likely(cell->type == 1)) {
 		initVerticesW(quad, x, z, 0, 0);
 		cached_drawWall(quad, 4, cell->west);
 		initVerticesS(quad, x, z, 0, 0);
@@ -3242,7 +3245,7 @@ case 32: // fixes objects on hole (level 4)
 		}
 	}
 #ifdef BUFFER_TEXTPOLYGONS
-	_render->flushQuads();
+	_render->renderQuads();
 #endif
 }
 
