@@ -593,6 +593,9 @@ struct Game {
 	void drawSceneObject(SceneObject *so);
 	void redrawScene();
 	void drawWall(const Vertex *vertices, int verticesCount, int texture);
+#ifdef BUFFER_TEXTPOLYGONS
+	void cached_drawWall(const Vertex *vertices, int verticesCount, int texture);
+#endif
 	bool redrawSceneGridCell(int x, int z, CellMap *cell);
 	void redrawSceneGroundWalls();
 	bool findRoom(const CollisionSlot *colSlot, int room1, int room2);

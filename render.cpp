@@ -12,6 +12,38 @@
 #include "render.h"
 #include "texturecache.h"
 
+#ifdef BUFFER_TEXTPOLYGONS
+
+int flshd=0;
+
+
+#include <algorithm> /* to sort GLquads */
+struct GLvertex_textured {
+	GLfloat x,y,z;
+	GLfloat u, v;
+	GLuint  t;
+};
+
+struct GLquad_textured {
+	GLvertex_textured vertices[6];
+};
+
+static inline void __tGLvert(GLvertex_textured *glv, Vertex *v, GLfloat *uv, GLuint t) {
+		glv->x = v->x;
+		glv->y = v->y;
+		glv->z = v->z;
+
+		glv->u = uv[0];
+		glv->v = uv[1];
+
+		glv->t = t;
+}
+
+static GLuint          polytext_lt = 0; //Last texture used
+static GLquad_textured polytext_quads[((64 + 1) * 64) + ((64+1) *64) + (64*64)];
+static uint32_t 	   polytext_c = 0;
+#endif
+
 #ifdef BUFFER_FLATPOLYGONS
 /*
  * __fGLvert(glv, v, r,g,b,a)
@@ -21,8 +53,6 @@ struct GLvertex_flat {
 	GLfloat x,y,z;
 	GLfloat r, g, b, a;
 };
-
-#define __OFFSET_MEMBER(p, m) ((size_t*)(&((p *)0)->m))
 
 #define __fGLvert(glv, v, r,g,b,a) { \
 		glv.x = v.x; \
@@ -37,6 +67,10 @@ struct GLvertex_flat {
 
 static GLvertex_flat polyflat_vert[20480];
 static int 			 polyflat_count = 0;
+#endif
+
+#if defined(BUFFER_FLATPOLYGONS) || defined(BUFFER_TEXTPOLYGONS)
+#define __OFFSET_MEMBER(p, m) ((size_t*)(&((p *)0)->m))
 #endif
 
 static const bool kOverlayDisabled = false;
@@ -152,6 +186,20 @@ static void emitQuadTex3i(const Vertex *vertices, GLfloat *uv) {
 #endif
 }
 
+#ifdef BUFFER_TEXTPOLYGONS
+static void bemitQuadTex3i(const Vertex *vertices, GLfloat *uv) {
+	GLvertex_textured *vertex = polytext_quads[polytext_c++].vertices;
+
+	__tGLvert(&vertex[0], (Vertex*)&vertices[0], &uv[0], polytext_lt);
+	__tGLvert(&vertex[1], (Vertex*)&vertices[1], &uv[2], polytext_lt);
+	__tGLvert(&vertex[2], (Vertex*)&vertices[2], &uv[4], polytext_lt);
+
+	__tGLvert(&vertex[3], (Vertex*)&vertices[2], &uv[4], polytext_lt);
+	__tGLvert(&vertex[4], (Vertex*)&vertices[3], &uv[6], polytext_lt);
+	__tGLvert(&vertex[5], (Vertex*)&vertices[0], &uv[0], polytext_lt);
+}
+#endif
+
 static void emitTriTex3i(const Vertex *vertices, const GLfloat *uv) {
 #ifdef USE_GLES
 	glVertexPointer(3, GL_FLOAT, 0, bufferVertex(vertices, 3));
@@ -169,6 +217,7 @@ static void emitTriTex3i(const Vertex *vertices, const GLfloat *uv) {
 #endif
 }
 
+#if 0
 static void emitTriFan3i(const Vertex *vertices, int count) {
 #ifdef USE_GLES
 	glVertexPointer(3, GL_FLOAT, 0, bufferVertex(vertices, count));
@@ -181,6 +230,7 @@ static void emitTriFan3i(const Vertex *vertices, int count) {
         glEnd();
 #endif
 }
+#endif
 
 static void emitPoint3f(const Vertex *pos) {
 #ifdef USE_GLES
@@ -209,16 +259,27 @@ Render::Render() {
 	_viewport.ph = 256;
 	_textureCache.init();
 #ifdef BUFFER_FLATPOLYGONS
-	glGenBuffers(2, VBOs);
+	glGenBuffers(1, &VBOs[0]);
 	glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(polyflat_vert), NULL, GL_DYNAMIC_DRAW);
-
-	//glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]); //TODO:: textured polygon vbo init */
+#endif
+#ifdef BUFFER_TEXTPOLYGONS
+	glGenBuffers(1, &VBOs[1]);
+	glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(polytext_quads), NULL, GL_DYNAMIC_DRAW);
+#endif
+#if defined(BUFFER_TEXTPOLYGONS) || defined(BUFFER_FLATPOLYGONS)
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 #endif
 }
 
 Render::~Render() {
+#ifdef BUFFER_FLATPOLYGONS
+	glDeleteBuffers(1, &VBOs[0]);
+#endif
+#ifdef BUFFER_TEXTPOLYGONS
+	glDeleteBuffers(1, &VBOs[1]);
+#endif
 	free(_overlay.buf);
 }
 
@@ -283,8 +344,9 @@ void Render::drawPolygonFlat(const Vertex *vertices, int verticesCount, int colo
 	glColor4f(1., 1., 1., 1.);
 }
 #else
+
 void Render::drawPolygonFlat(const Vertex *vertices, int verticesCount, int color) {
-	GLfloat r,g,b,a;
+	GLfloat r=0,g=0,b=0,a=0;
 	switch (color) {
 	case kFlatColorRed:
 		r = 1.; g = 0.; b = 0.; a = .5;
@@ -361,6 +423,7 @@ void Render::drawPolygonTexture(const Vertex *vertices, int verticesCount, int p
 	glEnable(GL_TEXTURE_2D);
 	Texture *t = _textureCache.getCachedTexture(texData, texW, texH, texKey);
 	glBindTexture(GL_TEXTURE_2D, t->id);
+
 	const GLfloat tx = t->u;
 	const GLfloat ty = t->v;
 	switch (primitive) {
@@ -451,6 +514,128 @@ void Render::drawPolygonTexture(const Vertex *vertices, int verticesCount, int p
 	}
 	glDisable(GL_TEXTURE_2D);
 }
+
+#ifdef BUFFER_TEXTPOLYGONS
+void Render::cached_drawPolygonTexture(const Vertex *vertices, int verticesCount, int primitive, const uint8_t *texData, int texW, int texH, int16_t texKey) {
+	if (flshd)
+		return;
+
+	assert(texData && texW > 0 && texH > 0);
+	assert(vertices && verticesCount >= 4);
+	Texture *t = _textureCache.getCachedTexture(texData, texW, texH, texKey);
+	polytext_lt = t->id;
+
+	const GLfloat tx = t->u;
+	const GLfloat ty = t->v;
+	switch (primitive) {
+	case 0:
+	case 2:
+		{
+			GLfloat uv[] = { 0., 0., tx, 0., tx, ty, 0., ty };
+			bemitQuadTex3i(vertices, uv);
+		}
+		break;
+	case 1:
+		{
+			GLfloat uv[] = { tx / 2, 0., tx, ty, 0., ty };
+			//emitTriTex3i(vertices, uv);
+		}
+		break;
+	case 3:
+	case 5:
+		{
+			GLfloat uv[] = { tx, 0., tx, ty, 0., ty, 0., 0. };
+			bemitQuadTex3i(vertices, uv);
+		}
+		break;
+	case 4:
+		{
+			GLfloat uv[] = { tx, ty, 0., ty, tx / 2, 0. };
+			//emitTriTex3i(vertices, uv);
+		}
+		break;
+	case 6:
+	case 8:
+		{
+			GLfloat uv[] = { tx, ty, 0., ty, 0., 0., tx, 0. };
+			bemitQuadTex3i(vertices, uv);
+		}
+		break;
+	case 7:
+		{
+			GLfloat uv[] = { .0, ty, tx / 2, 0., tx, ty };
+			//emitTriTex3i(vertices, uv);
+		}
+		break;
+	case 9:
+	case 10:
+		{
+			GLfloat uv[] = { 0., 0., 0., ty, tx, ty, tx, 0. };
+			bemitQuadTex3i(vertices, uv);
+		}
+		break;
+	default:
+		warning("Render::drawPolygonTexture() unhandled primitive %d", primitive);
+		break;
+	}
+}
+
+static bool comp_quads(const GLquad_textured & q1, const GLquad_textured & q2)
+{
+	return q1.vertices[0].t < q2.vertices[0].t ;
+}
+
+void Render::flushQuads()
+{
+	//
+
+	/*glEnable(GL_TEXTURE_COORD_ARRAY);*/
+	glEnable(GL_TEXTURE_2D);
+	glEnable(GL_ARRAY_BUFFER);
+	glEnable(GL_CULL_FACE);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]);
+	if (!flshd) {
+		std::sort(&polytext_quads[0], &polytext_quads[polytext_c], comp_quads);
+
+		glBufferData(GL_ARRAY_BUFFER, sizeof(GLquad_textured) * polytext_c, &polytext_quads[0].vertices[0], GL_DYNAMIC_DRAW);
+		flshd = 1;
+	}
+
+
+	glVertexPointer  (3, GL_FLOAT, sizeof(GLvertex_textured), __OFFSET_MEMBER(GLvertex_textured,x));
+	glTexCoordPointer(2, GL_FLOAT, sizeof(GLvertex_textured), __OFFSET_MEMBER(GLvertex_textured,u));
+
+	int tail=0;
+	for (int head = 1; head<polytext_c; head++) {
+		//printf("%i %i\n", head, polytext_c);
+		if (polytext_quads[tail].vertices[0].t != polytext_quads[head].vertices[0].t)
+		{
+			glBindTexture(GL_TEXTURE_2D, polytext_quads[tail].vertices[0].t);
+			glDrawArrays(GL_TRIANGLES, tail*6, (head-tail)*6);
+			tail = head;
+		}
+		else if (head == polytext_c-1)
+		{
+			glBindTexture(GL_TEXTURE_2D, polytext_quads[head].vertices[0].t);
+			glDrawArrays(GL_TRIANGLES, tail*6, (head-tail+1)*6);
+		}
+	}
+
+	/*glBindTexture(GL_TEXTURE_2D, polytext_quads[tail].vertices[0].t);
+	glDrawArrays(GL_TRIANGLES, tail*6, polytext_c*6);*/
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_ARRAY_BUFFER);
+	glDisable(GL_TEXTURE_2D);
+	/*glDisable(GL_TEXTURE_COORD_ARRAY);*/
+
+	//polytext_c = 0;
+}
+
+#endif
 
 void Render::drawParticle(const Vertex *pos, int color) {
 	assert(color >= 0 && color < 256);

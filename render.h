@@ -6,6 +6,9 @@
 #ifndef RENDER_H__
 #define RENDER_H__
 
+#define BUFFER_TEXTPOLYGONS 1
+#define BUFFER_FLATPOLYGONS 1
+
 #include "util.h"
 
 enum {
@@ -51,6 +54,10 @@ struct Render {
 	void flushPolygonFlat();
 #endif
 	void drawPolygonTexture(const Vertex *vertices, int verticesCount, int primitive, const uint8_t *texData, int texW, int texH, int16_t texKey);
+#ifdef BUFFER_TEXTPOLYGONS
+	void cached_drawPolygonTexture(const Vertex *vertices, int verticesCount, int primitive, const uint8_t *texData, int texW, int texH, int16_t texKey);
+	void flushQuads();
+#endif
 	void drawParticle(const Vertex *pos, int color);
 	void drawSprite(int x, int y, const uint8_t *texData, int texW, int texH, int16_t texKey);
 	void drawRectangle(int x, int y, int w, int h, int color);
