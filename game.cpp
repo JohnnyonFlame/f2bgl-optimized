@@ -2978,9 +2978,9 @@ void Game::cached_drawWall(const Vertex *vertices, int verticesCount, int textur
 	texture &= 4095;
 	if (texture >= 0  && texture < 512) {
 		_sceneAnimationsTable[texture].type |= 0x10;
-		if (likely(texture != 0 && texture != 1)) {
+		if (texture != 0 && texture != 1) {
 			SpriteImage *spr = &_sceneAnimationsTextureTable[texture];
-			if (likely(spr->data)) {
+			if (spr->data) {
 				const uint8_t *texData = _spriteCache.getData(spr->key, spr->data);
 				_render->cached_drawPolygonTexture(vertices, verticesCount, 0, texData, spr->w, spr->h, spr->key);
 			}
@@ -2992,9 +2992,9 @@ void Game::drawWall(const Vertex *vertices, int verticesCount, int texture) {
 	texture &= 4095;
 	if (texture >= 0  && texture < 512) {
 		_sceneAnimationsTable[texture].type |= 0x10;
-		if (likely(texture != 0 && texture != 1)) {
+		if (texture != 0 && texture != 1) {
 			SpriteImage *spr = &_sceneAnimationsTextureTable[texture];
-			if (likely(spr->data)) {
+			if (spr->data) {
 				const uint8_t *texData = _spriteCache.getData(spr->key, spr->data);
 				_render->drawPolygonTexture(vertices, verticesCount, 0, texData, spr->w, spr->h, spr->key);
 			}
@@ -3122,7 +3122,7 @@ bool Game::redrawSceneGridCell(int x, int z, CellMap *cell) {
 	}
 
 #ifdef BUFFER_TEXTPOLYGONS
-	if (likely(cell->type == 1)) {
+	if (cell->type == 1) {
 		initVerticesW(quad, x, z, 0, 0);
 		cached_drawWall(quad, 4, cell->west);
 		initVerticesS(quad, x, z, 0, 0);
