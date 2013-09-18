@@ -31,6 +31,11 @@ enum FilePosition {
 
 extern bool g_isDemo;
 
+struct FILEWHOLE {
+	uint32_t pos, eof;
+	uint8_t *data;
+};
+
 bool fileInit(int language, int voice, const char *dataPath);
 bool fileExists(const char *fileName, int fileType);
 FILE *fileOpen(const char *fileName, int *fileSize, int fileType, bool errorIfNotFound = true);

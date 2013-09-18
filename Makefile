@@ -8,7 +8,7 @@ LIBS = $(SDL_LIBS) -lGL
 
 CXXFLAGS += -O2 -fweb -pipe -Wall -Wuninitialized -Wno-sign-compare
 
-SRCS = box.cpp camera.cpp collision.cpp cutscene.cpp decoder.cpp file.cpp \
+SRCS = box.cpp camera.cpp collision.cpp cutscene.cpp decoder.cpp file_whole.cpp \
 	font.cpp game.cpp input.cpp inventory.cpp main.cpp mathfuncs.cpp menu.cpp mixer.cpp \
 	opcodes.cpp raycast.cpp render.cpp resource.cpp scaler.cpp sound.cpp spritecache.cpp \
 	stub.cpp texturecache.cpp util.cpp

@@ -45,14 +45,15 @@ static uint32_t 	   polytext_c = 0;
 #endif
 
 #ifdef BUFFER_FLATPOLYGONS
-/*
- * __fGLvert(glv, v, r,g,b,a)
- * Fills one GLvertex_flat instance
- */
 struct GLvertex_flat {
 	GLfloat x,y,z;
 	GLubyte r, g, b, a;
 };
+
+/*
+ * __fGLvert(glv, v, r,g,b,a)
+ * Fills one GLvertex_flat instance
+ */
 
 #define __fGLvert(glv, v, r,g,b,a) { \
 		glv.x = v.x; \
@@ -266,7 +267,7 @@ Render::Render() {
 #ifdef BUFFER_TEXTPOLYGONS
 	glGenBuffers(1, &VBOs[1]);
 	glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(polytext_quads), NULL, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(polytext_quads), NULL, GL_STATIC_DRAW);
 #endif
 #if defined(BUFFER_TEXTPOLYGONS) || defined(BUFFER_FLATPOLYGONS)
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -399,10 +400,11 @@ void Render::drawPolygonFlat(const Vertex *vertices, int verticesCount, int colo
 
 void Render::flushPolygonFlat() {
 	glEnable(GL_COLOR_ARRAY);
-	glEnable(GL_ARRAY_BUFFER);
+	//glEnable(GL_ARRAY_BUFFER);
 
 	glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLvertex_flat) * polyflat_count, &polyflat_vert[0], GL_DYNAMIC_DRAW);
+	//glBufferData(GL_ARRAY_BUFFER, sizeof(GLvertex_flat) * polyflat_count, &polyflat_vert[0], GL_DYNAMIC_DRAW);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLvertex_flat) * polyflat_count, &polyflat_vert[0]);
 
 	glVertexPointer(3, GL_FLOAT, 		 sizeof(GLvertex_flat), __OFFSET_MEMBER(GLvertex_flat, x));
 	glColorPointer (4, GL_UNSIGNED_BYTE, sizeof(GLvertex_flat), __OFFSET_MEMBER(GLvertex_flat, r));
@@ -410,7 +412,7 @@ void Render::flushPolygonFlat() {
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-	glDisable(GL_ARRAY_BUFFER);
+	//glDisable(GL_ARRAY_BUFFER);
 	glDisable(GL_COLOR_ARRAY);
 
 	polyflat_count = 0;
@@ -535,12 +537,6 @@ void Render::cached_drawPolygonTexture(const Vertex *vertices, int verticesCount
 			bemitQuadTex3i(vertices, uv);
 		}
 		break;
-	case 1:
-		{
-			GLfloat uv[] = { tx / 2, 0., tx, ty, 0., ty };
-			//emitTriTex3i(vertices, uv);
-		}
-		break;
 	case 3:
 	case 5:
 		{
@@ -548,23 +544,11 @@ void Render::cached_drawPolygonTexture(const Vertex *vertices, int verticesCount
 			bemitQuadTex3i(vertices, uv);
 		}
 		break;
-	case 4:
-		{
-			GLfloat uv[] = { tx, ty, 0., ty, tx / 2, 0. };
-			//emitTriTex3i(vertices, uv);
-		}
-		break;
 	case 6:
 	case 8:
 		{
 			GLfloat uv[] = { tx, ty, 0., ty, 0., 0., tx, 0. };
 			bemitQuadTex3i(vertices, uv);
-		}
-		break;
-	case 7:
-		{
-			GLfloat uv[] = { .0, ty, tx / 2, 0., tx, ty };
-			//emitTriTex3i(vertices, uv);
 		}
 		break;
 	case 9:

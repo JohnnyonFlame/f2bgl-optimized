@@ -12,7 +12,7 @@
 #include "texturecache.h"
 
 static const int kDefaultTexBufSize = 320 * 200;
-static const int kTextureMinMaxFilter = GL_LINEAR; // GL_NEAREST
+static const int kTextureMinMaxFilter = GL_NEAREST; // GL_NEAREST
 
 uint16_t convert_RGBA_5551(int r, int g, int b) {
 	return ((r >> 3) << 11) | ((g >> 3) << 6) | ((b >> 3) << 1) | 1;

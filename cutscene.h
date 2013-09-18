@@ -48,11 +48,13 @@ struct Cutscene {
 	int _playedTable[kCutsceneScenesCount];
 	int _numToPlayCounter;
 	int _numToPlay;
+
 	FILE *_fp;
 	uint8_t _palette[256 * 3];
 	CinFileHeader _fileHdr;
 	CinFrameHeader _frameHdr;
 	bool _interrupted;
+	uint8_t *_cutsceneBuffer;
 	uint8_t *_frameBuffers[kFrameBuffersCount];
 	uint8_t *_frameReadBuffer;
 	int _frameCounter;
