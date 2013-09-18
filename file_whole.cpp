@@ -135,7 +135,7 @@ void fileRead(FILE *fp, void *buf, int size) {
 			error("I/O error on reading %d bytes", size);
 		}
 	}*/
-	if (f->eof < f->pos + size)
+	if (f->eof < f->pos + size + 1)
 		error("I/O error on reading %d bytes, EOF", size);
 
 	memcpy(buf, f->data + f->pos, size);
@@ -174,7 +174,10 @@ void fileSetPos(FILE *fp, uint32_t pos, int origin) {
 			error("I/O error on seeking to offset %d", pos);
 		}
 	}*/
-	((FILEWHOLE*)fp)->pos = pos;
+	if (origin)
+		((FILEWHOLE*)fp)->pos = pos;
+	else
+		((FILEWHOLE*)fp)->pos += pos;
 }
 
 int fileEof(FILE *fp) {
