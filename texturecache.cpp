@@ -50,7 +50,7 @@ static const struct {
 	{ scale3x, 3 },
 };
 
-static const int _scaler = 2;
+static const int _scaler = 0;
 
 TextureCache::TextureCache()
 	: _fmt(0), _texturesListHead(0), _texturesListTail(0) {

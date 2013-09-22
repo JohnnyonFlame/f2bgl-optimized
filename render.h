@@ -60,7 +60,7 @@ struct Render {
 
 	void drawPolygonFlat(const Vertex *vertices, int verticesCount, int color);
 #ifdef BUFFER_FLATPOLYGONS
-	void flushPolygonFlat();
+	void flushPolygonFlat(float yGround);
 #endif
 	void drawPolygonTexture(const Vertex *vertices, int verticesCount, int primitive, const uint8_t *texData, int texW, int texH, int16_t texKey);
 #ifdef BUFFER_TEXTPOLYGONS
@@ -83,7 +83,7 @@ struct Render {
 	void setOverlayDim(int w, int h, bool hflip = false);
 	void copyToOverlay(int x, int y, const uint8_t *data, int pitch, int w, int h, int transparentColor = -1);
 
-	void setPalette(const uint8_t *pal, int count);
+	void setPalette(const uint8_t *pal, int count, bool updateTextures = true);
 	void clearScreen();
 	void setupProjection(int mode = 0);
 	void setupProjection2d();

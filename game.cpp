@@ -2849,6 +2849,10 @@ bool Game::getMessage(int16_t key, uint32_t value, ResMessageDescription *desc) 
 	return offset != -1 && _res.getMessageDescription(desc, value, offset);
 }
 
+#ifdef BUFFER_FLATPOLYGONS
+float floorY=0;
+#endif
+
 void Game::drawSceneObjectMesh(const uint8_t *polygonsData, const uint8_t *verticesData, int verticesCount) {
 	if (polygonsData[0] & 0x80) {
 		const int shadowPolySize = -(int8_t)polygonsData[0];
@@ -2936,12 +2940,15 @@ void Game::drawSceneObjectMesh(const uint8_t *polygonsData, const uint8_t *verti
 		color = READ_LE_UINT16(polygonsData); polygonsData += 2;
 	}
 #ifdef BUFFER_FLATPOLYGONS
-	_render->flushPolygonFlat();
+	_render->flushPolygonFlat(floorY*2);
 #endif
 }
 
 void Game::drawSceneObject(SceneObject *so) {
 	if (so->verticesCount != 0) {
+#ifdef BUFFER_FLATPOLYGONS
+		floorY = so->y / (float)(1 << kPosShift);
+#endif
 		_render->beginObjectDraw(so->x, so->y, so->z, so->o->pitch, kPosShift);
 		assert(so->polygonsData != 0 && so->verticesData != 0);
 		drawSceneObjectMesh(so->polygonsData, so->verticesData, so->verticesCount);

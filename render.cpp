@@ -244,7 +244,7 @@ static void emitPoint3f(const Vertex *pos) {
 #endif
 }
 
-static TextureCache _textureCache;
+TextureCache _textureCache;
 static Vertex3f _cameraPos;
 static GLfloat _cameraPitch;
 static Vertex4f _frustum[6];
@@ -398,21 +398,31 @@ void Render::drawPolygonFlat(const Vertex *vertices, int verticesCount, int colo
 	}
 }
 
-void Render::flushPolygonFlat() {
+void Render::flushPolygonFlat(float yGround) {
 	glEnable(GL_COLOR_ARRAY);
-	//glEnable(GL_ARRAY_BUFFER);
 
 	glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
-	//glBufferData(GL_ARRAY_BUFFER, sizeof(GLvertex_flat) * polyflat_count, &polyflat_vert[0], GL_DYNAMIC_DRAW);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLvertex_flat) * polyflat_count, &polyflat_vert[0]);
+
+	memcpy(&polyflat_vert[polyflat_count], &polyflat_vert[0], sizeof(GLvertex_flat) * polyflat_count);
+	for (int i=polyflat_count; i< polyflat_count << 1; i++)
+	{
+		polyflat_vert[i].y = 127 - yGround;
+
+		polyflat_vert[i].r = 0;
+		polyflat_vert[i].g = 0;
+		polyflat_vert[i].b = 0;
+		polyflat_vert[i].a = 127;
+	}
+
+	glBufferData(GL_ARRAY_BUFFER, sizeof(GLvertex_flat) * polyflat_count * 2, &polyflat_vert[0], GL_DYNAMIC_DRAW);
+	//glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLvertex_flat) * polyflat_count, &polyflat_vert[0]);
 
 	glVertexPointer(3, GL_FLOAT, 		 sizeof(GLvertex_flat), __OFFSET_MEMBER(GLvertex_flat, x));
 	glColorPointer (4, GL_UNSIGNED_BYTE, sizeof(GLvertex_flat), __OFFSET_MEMBER(GLvertex_flat, r));
-	glDrawArrays(GL_TRIANGLES, 0, polyflat_count);
+	glDrawArrays(GL_TRIANGLES, 0, polyflat_count * 2);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-	//glDisable(GL_ARRAY_BUFFER);
 	glDisable(GL_COLOR_ARRAY);
 
 	polyflat_count = 0;
@@ -764,7 +774,7 @@ void Render::setOverlayDim(int w, int h, bool hflip) {
 	_overlay.hflip = hflip;
 }
 
-void Render::setPalette(const uint8_t *pal, int count) {
+void Render::setPalette(const uint8_t *pal, int count, bool updateTextures) {
 	for (int i = 0; i < count; ++i) {
 		const int r = pal[0];
 		const int g = pal[1];
@@ -783,7 +793,7 @@ void Render::setPalette(const uint8_t *pal, int count) {
 		_ubpixelColorMap[3][i] = (i == 0) ? 0 : 255;
 		pal += 3;
 	}
-	_textureCache.setPalette(_clut);
+	_textureCache.setPalette(_clut, updateTextures);
 }
 
 void Render::clearScreen() {

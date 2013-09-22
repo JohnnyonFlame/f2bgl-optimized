@@ -288,7 +288,7 @@ struct GameStub_F2B : GameStub {
 		switch (_state) {
 		case 0: // cutscene
 			_render->clearScreen();
-			_skip = syncTicks(ticks, kCutsceneFrameDelay);
+			//_skip = syncTicks(ticks, kCutsceneFrameDelay);
 			if (_skip) {
 				return;
 			}
@@ -305,6 +305,8 @@ struct GameStub_F2B : GameStub {
 					_nextState = 1;
 				}
 			}
+			/*_g->_cut._numToPlay = -1;
+			_nextState = 1;*/
 			break;
 		case 1: // game
 			if (_g->_changeLevel) {
