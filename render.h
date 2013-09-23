@@ -60,7 +60,7 @@ struct Render {
 
 	void drawPolygonFlat(const Vertex *vertices, int verticesCount, int color);
 #ifdef BUFFER_FLATPOLYGONS
-	void flushPolygonFlat(float yGround);
+	void flushPolygonFlat(float yGround, int shadow = false);
 #endif
 	void drawPolygonTexture(const Vertex *vertices, int verticesCount, int primitive, const uint8_t *texData, int texW, int texH, int16_t texKey);
 #ifdef BUFFER_TEXTPOLYGONS

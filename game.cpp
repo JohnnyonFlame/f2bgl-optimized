@@ -2940,7 +2940,7 @@ void Game::drawSceneObjectMesh(const uint8_t *polygonsData, const uint8_t *verti
 		color = READ_LE_UINT16(polygonsData); polygonsData += 2;
 	}
 #ifdef BUFFER_FLATPOLYGONS
-	_render->flushPolygonFlat(floorY*2);
+	_render->flushPolygonFlat(floorY*2, false);
 #endif
 }
 

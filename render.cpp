@@ -398,28 +398,34 @@ void Render::drawPolygonFlat(const Vertex *vertices, int verticesCount, int colo
 	}
 }
 
-void Render::flushPolygonFlat(float yGround) {
+void Render::flushPolygonFlat(float yGround, int shadow) {
 	glEnable(GL_COLOR_ARRAY);
 
 	glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
 
 	memcpy(&polyflat_vert[polyflat_count], &polyflat_vert[0], sizeof(GLvertex_flat) * polyflat_count);
-	for (int i=polyflat_count; i< polyflat_count << 1; i++)
+	if (likely(shadow))
 	{
-		polyflat_vert[i].y = 127 - yGround;
+		for (int i=polyflat_count; i< polyflat_count << 1; i++)
+		{
+			polyflat_vert[i].y = 127 - yGround;
 
-		polyflat_vert[i].r = 0;
-		polyflat_vert[i].g = 0;
-		polyflat_vert[i].b = 0;
-		polyflat_vert[i].a = 127;
+			polyflat_vert[i].r = 0;
+			polyflat_vert[i].g = 0;
+			polyflat_vert[i].b = 0;
+			polyflat_vert[i].a = 127;
+		}
+
+		polyflat_count <<= 1;
 	}
 
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLvertex_flat) * polyflat_count * 2, &polyflat_vert[0], GL_DYNAMIC_DRAW);
+
+	glBufferData(GL_ARRAY_BUFFER, sizeof(GLvertex_flat) * polyflat_count, &polyflat_vert[0], GL_DYNAMIC_DRAW);
 	//glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLvertex_flat) * polyflat_count, &polyflat_vert[0]);
 
 	glVertexPointer(3, GL_FLOAT, 		 sizeof(GLvertex_flat), __OFFSET_MEMBER(GLvertex_flat, x));
 	glColorPointer (4, GL_UNSIGNED_BYTE, sizeof(GLvertex_flat), __OFFSET_MEMBER(GLvertex_flat, r));
-	glDrawArrays(GL_TRIANGLES, 0, polyflat_count * 2);
+	glDrawArrays(GL_TRIANGLES, 0, polyflat_count);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 

@@ -331,7 +331,7 @@ void OpenCfg ( const char* file )
 #else
     eglSettings[CFG_MODE]           = RENDER_RAW;
 #endif
-    eglSettings[CFG_VSYNC]          = 0;
+    eglSettings[CFG_VSYNC]          = 1;
     eglSettings[CFG_FSAA]           = 0;
     eglSettings[CFG_FPS]            = 0;
     eglSettings[CFG_RED_SIZE]       = 5;
